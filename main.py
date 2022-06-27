@@ -75,20 +75,21 @@ async def rating_listener():
             'app_id': app_id,
             'rating': rating
             }
+    try:
+        while not gathered_prev_creations:
+            await asyncio.sleep(1)
 
-    while not gathered_prev_creations:
-        await asyncio.sleep(1)
+        prev_event_datas = app_rated_filter.get_all_entries()
+        print("Num of prev rating events: " + str(len(prev_event_datas)))
         
-    prev_event_datas = app_rated_filter.get_all_entries()
-    print("Num of prev rating events: " + str(len(prev_event_datas)))
-    
-    # Get all previous enteries
-    for event_data in prev_event_datas:
-        try:
-            dbActions.update_app_rating_db(**extract_rating_event_args(event_data))
-        except Exception as e:
-            print("rating_listener Exception: ", e)
-    
+        # Get all previous enteries
+        for event_data in prev_event_datas:
+            try:
+                dbActions.update_app_rating_db(**extract_rating_event_args(event_data))
+            except Exception as e:
+                print("rating_listener Exception: ", e)
+    except Exception as e:
+        print("rating_listener Exception (outer): ", e)
     
     while True:
         try:

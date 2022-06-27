@@ -21,15 +21,16 @@ db_connection = psycopg2.connect(
 
 print(f"DB DEBUG DATA: username: {username}. password: {password}. database: {database}. hostname: {hostname}. port: {port}.")
 
-def db_action(action: str):
-    print("DB ACTION: " + action)
+def db_action(action):
+    print("DB ACTION: ", action)
     try:
         with db_connection.cursor() as cur:
             
-            cur.execute(action)
+            cur.execute(*action)
             db_connection.commit() 
 
     except (Exception, psycopg2.DatabaseError) as error:
+        db_connection.rollback()
         print("SQL do_action Error: ", error)
     
 def db_fetch(sql: str):
@@ -45,16 +46,18 @@ def db_fetch(sql: str):
 
     except (Exception, psycopg2.DatabaseError) as error:
         print("SQL db_fetch Error: ", error)
+        db_connection.rollback()
         return Tuple()
 
 def insert_app_to_db(id: int, name: str, description: str, category: str, rating: float, **kw):
     
-    sql = f"""INSERT INTO public.apps(id, name, description, rating, category) VALUES ({id}, '{name}', '{description}', {rating}, '{category}') ON CONFLICT DO NOTHING;"""
-    
+    #sql = f"""INSERT INTO public.apps(id, name, description, rating, category) VALUES ({id}, '{name}', '{description}', {rating}, '{category}') ON CONFLICT DO NOTHING;"""
+    sql=(f"""INSERT INTO public.apps(id, name, description, rating, category) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;""", [id, name, description, rating,category])
     db_action(sql)
     
 def add_purchase_do_db(app_addr: str, creator_addr: str, purchaser_addr: str, **kw):
-    sql = f"""INSERT INTO public.purchases(app_addr, creator_addr, purchaser_addr) VALUES ('{app_addr}', '{creator_addr}', '{purchaser_addr}') ON CONFLICT DO NOTHING;"""
+    #sql = f"""INSERT INTO public.purchases(app_addr, creator_addr, purchaser_addr) VALUES ('{app_addr}', '{creator_addr}', '{purchaser_addr}') ON CONFLICT DO NOTHING;"""
+    sql = (f"""INSERT INTO public.purchases(app_addr, creator_addr, purchaser_addr) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;""", [app_addr, creator_addr, purchaser_addr])
     db_action(sql)
 
 def get_filtered_app_ids(offset, length, textFilter, categoryFilter, ratingFilter):
@@ -79,9 +82,12 @@ def get_filtered_app_ids(offset, length, textFilter, categoryFilter, ratingFilte
     return ids
 
 def update_app_rating_db(app_id: int, rating: float):
-    sql = f"""UPDATE public.apps SET rating = {rating} WHERE id = {app_id};"""
+    #sql = f"""UPDATE public.apps SET rating = {rating} WHERE id = {app_id};"""
+    sql = (f"""UPDATE public.apps SET rating = %s WHERE id = %s;""", [rating, app_id])
+
     db_action(sql)
     
 def update_app_name_description_db(app_id: int, name: str, description: str):
-    sql = f"""UPDATE public.apps SET name = '{name}', description = '{description}' WHERE id = {app_id};"""
+    #sql = f"""UPDATE public.apps SET name = '{name}', description = '{description}' WHERE id = {app_id};"""
+    sql = (f"""UPDATE public.apps SET name = %s, description = %s WHERE id = %s;""", [name, description, app_id])
     db_action(sql)
